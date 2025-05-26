@@ -17,7 +17,8 @@ void child_loop(int index);
 void run_exec(char **exec_args);
 void terminate_children(pid_t *children, int count);
 void wait_for_children(pid_t *children, int count);
-void take_screenshot(const char *filename); 
+void take_screenshot(const char *prefix, char **exec_args);
+
 
 int main(int argc, char *argv[]) {
     Args args;
@@ -28,17 +29,24 @@ int main(int argc, char *argv[]) {
         perror("malloc failed");
         exit(EXIT_FAILURE);
     }
+
     create_children(&args, children);
-    sleep(2); 
-    take_screenshot("screenshot_start.png");
-    sleep(3); 
+
+    sleep(2);
+    take_screenshot("start", args.exec_args);
+
+    sleep(3);
     terminate_children(children, args.num_processes);
     wait_for_children(children, args.num_processes);
+
     free(children);
     printf("Parent process finished.\n");
-    take_screenshot("screenshot_end.png");
+
+    take_screenshot("end", args.exec_args);
+
     return 0;
 }
+
 
 void parse_arguments(int argc, char *argv[], Args *args) {
     if (argc < 4) {
@@ -132,10 +140,13 @@ void wait_for_children(pid_t *children, int count) {
     }
 }
 
-
-void take_screenshot(const char *filename) {
+void take_screenshot(const char *prefix, char **exec_args) {
     char command[256];
+    char filename[128];
+
+    snprintf(filename, sizeof(filename), "screenshot_%s_%s.png", prefix, exec_args[0]);
     snprintf(command, sizeof(command), "scrot %s", filename);
+
     int result = system(command);
     if (result == 0) {
         printf("Screenshot saved as: %s\n", filename);
