@@ -43,7 +43,9 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        args.exec_args = &argv[3];
+        args.exec_args = malloc(2 * sizeof(char *));
+        args.exec_args[0] = strdup(argv[3]);
+        args.exec_args[1] = NULL;
     }
 
     pid_t *children = malloc(sizeof(pid_t) * args.num_processes);
@@ -64,15 +66,20 @@ int main(int argc, char *argv[]) {
     free(children);
     printf("Parent process finished.\n");
     fflush(stdout);
-    usleep(200000); 
+    usleep(200000);
 
     take_screenshot("end", args.exec_args);
+
+    for (int i = 0; args.exec_args[i] != NULL; i++) {
+        free(args.exec_args[i]);
+    }
+    free(args.exec_args);
 
     return 0;
 }
 
 void read_command_interactively(char *line, size_t size) {
-    printf("Enter the command to run via exec (e.g., ls, ps aux, time ls):\n> ");
+    printf("Enter the command to run via exec (e.g., ls, pwd, whoami, time):\n> ");
     fgets(line, size, stdin);
     line[strcspn(line, "\n")] = 0;
 }
@@ -82,11 +89,17 @@ void build_exec_args(char *line, Args *args) {
         strcpy(line, "time true");
     }
 
-    args->exec_args = malloc(4 * sizeof(char *));
-    args->exec_args[0] = strdup("bash");
-    args->exec_args[1] = strdup("-c");
-    args->exec_args[2] = strdup(line);
-    args->exec_args[3] = NULL;
+    if (strncmp(line, "time", 4) == 0) {
+        args->exec_args = malloc(4 * sizeof(char *));
+        args->exec_args[0] = strdup("bash");
+        args->exec_args[1] = strdup("-c");
+        args->exec_args[2] = strdup(line);
+        args->exec_args[3] = NULL;
+    } else {
+        args->exec_args = malloc(2 * sizeof(char *));
+        args->exec_args[0] = strdup(line);
+        args->exec_args[1] = NULL;
+    }
 }
 
 void create_children(Args *args, pid_t *children) {
