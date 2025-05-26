@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
     free(children);
     printf("Parent process finished.\n");
     fflush(stdout);
+    usleep(200000); 
 
     take_screenshot("end", args.exec_args);
 
