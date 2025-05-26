@@ -11,7 +11,8 @@ typedef struct {
     char **exec_args;
 } Args;
 
-void parse_arguments(int argc, char *argv[], Args *args);
+void read_command_interactively(char *line, size_t size);
+void build_exec_args(char *line, Args *args);
 void create_children(Args *args, pid_t *children);
 void child_loop(int index);
 void run_exec(char **exec_args);
@@ -19,10 +20,31 @@ void terminate_children(pid_t *children, int count);
 void wait_for_children(pid_t *children, int count);
 void take_screenshot(const char *prefix, char **exec_args);
 
-
 int main(int argc, char *argv[]) {
     Args args;
-    parse_arguments(argc, argv, &args);
+
+    if (argc < 4) {
+        printf("Enter the number of child processes: ");
+        scanf("%d", &args.num_processes);
+
+        printf("Enter the index of the process that will run exec (from 0 to %d): ", args.num_processes - 1);
+        scanf("%d", &args.exec_index);
+        getchar(); // remove newline
+
+        char line[256];
+        read_command_interactively(line, sizeof(line));
+        build_exec_args(line, &args);
+    } else {
+        args.num_processes = atoi(argv[1]);
+        args.exec_index = atoi(argv[2]);
+
+        if (args.exec_index < 0 || args.exec_index >= args.num_processes) {
+            fprintf(stderr, "Invalid exec_index: %d (should be from 0 to %d)\n", args.exec_index, args.num_processes - 1);
+            exit(EXIT_FAILURE);
+        }
+
+        args.exec_args = &argv[3];
+    }
 
     pid_t *children = malloc(sizeof(pid_t) * args.num_processes);
     if (!children) {
@@ -41,63 +63,29 @@ int main(int argc, char *argv[]) {
 
     free(children);
     printf("Parent process finished.\n");
+    fflush(stdout);
 
     take_screenshot("end", args.exec_args);
 
     return 0;
 }
 
+void read_command_interactively(char *line, size_t size) {
+    printf("Enter the command to run via exec (e.g., ls, ps aux, time ls):\n> ");
+    fgets(line, size, stdin);
+    line[strcspn(line, "\n")] = 0;
+}
 
-void parse_arguments(int argc, char *argv[], Args *args) {
-    if (argc < 4) {
-        printf("Enter the number of child processes: ");
-        scanf("%d", &args->num_processes);
-
-        printf("Enter the index of the process that will run exec (from 0 to %d): ", args->num_processes - 1);
-        scanf("%d", &args->exec_index);
-        getchar(); // remove newline
-
-        printf("Enter the command to run via exec (e.g., ls, ps aux, time ls):\n> ");
-
-        char line[256];
-        fgets(line, sizeof(line), stdin);
-        line[strcspn(line, "\n")] = 0;
-
-        if (strncmp(line, "time ", 5) == 0) {
-            args->exec_args = malloc(4 * sizeof(char *));
-            args->exec_args[0] = strdup("sh");
-            args->exec_args[1] = strdup("-c");
-            args->exec_args[2] = strdup(line); // full "time ls"
-            args->exec_args[3] = NULL;
-        } else {
-            int count = 0;
-            char *token;
-            char *temp_args[10];
-
-            token = strtok(line, " ");
-            while (token != NULL && count < 10) {
-                temp_args[count++] = strdup(token);
-                token = strtok(NULL, " ");
-            }
-
-            args->exec_args = malloc((count + 1) * sizeof(char *));
-            for (int i = 0; i < count; i++) {
-                args->exec_args[i] = temp_args[i];
-            }
-            args->exec_args[count] = NULL;
-        }
-        return;
+void build_exec_args(char *line, Args *args) {
+    if (strcmp(line, "time") == 0) {
+        strcpy(line, "time true");
     }
 
-    args->num_processes = atoi(argv[1]);
-    args->exec_index = atoi(argv[2]);
-
-    if (args->exec_index < 0 || args->exec_index >= args->num_processes) {
-        fprintf(stderr, "Invalid exec_index: %d (should be from 0 to %d)\n", args->exec_index, args->num_processes - 1);
-        exit(EXIT_FAILURE);
-    }
-
-    args->exec_args = &argv[3];
+    args->exec_args = malloc(4 * sizeof(char *));
+    args->exec_args[0] = strdup("bash");
+    args->exec_args[1] = strdup("-c");
+    args->exec_args[2] = strdup(line);
+    args->exec_args[3] = NULL;
 }
 
 void create_children(Args *args, pid_t *children) {
@@ -129,6 +117,13 @@ void child_loop(int index) {
 }
 
 void run_exec(char **exec_args) {
+    printf("Running command: ");
+    for (int i = 0; exec_args[i] != NULL; i++) {
+        printf("%s ", exec_args[i]);
+    }
+    printf("\n");
+    fflush(stdout);
+
     execvp(exec_args[0], exec_args);
     perror("exec failed");
     exit(EXIT_FAILURE);
