@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 }
 
 void read_command_interactively(char *line, size_t size) {
-    printf("Enter the command to run via exec (e.g., ls, pwd, whoami, time):\n> ");
+    printf("Enter the command to run via exec (e.g., ls, ps, pwd, whoami, df, time, date):\n> ");
     fgets(line, size, stdin);
     line[strcspn(line, "\n")] = 0;
 }
