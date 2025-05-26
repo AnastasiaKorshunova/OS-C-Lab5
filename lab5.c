@@ -5,7 +5,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-
 typedef struct {
     int num_processes;
     int exec_index;
@@ -20,8 +19,6 @@ void terminate_children(pid_t *children, int count);
 void wait_for_children(pid_t *children, int count);
 void take_screenshot(const char *filename); 
 
-
-
 int main(int argc, char *argv[]) {
     Args args;
     parse_arguments(argc, argv, &args);
@@ -31,21 +28,17 @@ int main(int argc, char *argv[]) {
         perror("malloc failed");
         exit(EXIT_FAILURE);
     }
-
     create_children(&args, children);
-
-    sleep(2); // allow children to run before screenshot
-    take_screenshot("screenshot.png");
-
-    sleep(3); // total 5 seconds
+    sleep(2); 
+    take_screenshot("screenshot_start.png");
+    sleep(3); 
     terminate_children(children, args.num_processes);
     wait_for_children(children, args.num_processes);
-
     free(children);
     printf("Parent process finished.\n");
+    take_screenshot("screenshot_end.png");
     return 0;
 }
-
 
 void parse_arguments(int argc, char *argv[], Args *args) {
     if (argc < 4) {
@@ -139,7 +132,7 @@ void wait_for_children(pid_t *children, int count) {
     }
 }
 
-// 📸 Save screenshot using `scrot`
+
 void take_screenshot(const char *filename) {
     char command[256];
     snprintf(command, sizeof(command), "scrot %s", filename);
