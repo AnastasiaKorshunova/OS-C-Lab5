@@ -57,28 +57,35 @@ void parse_arguments(int argc, char *argv[], Args *args) {
         scanf("%d", &args->exec_index);
         getchar(); // remove newline
 
-        printf("Enter the command to run via exec (e.g., one of: ls, ps aux, pwd, whoami, df, date, time):\n> ");
+        printf("Enter the command to run via exec (e.g., ls, ps aux, time ls):\n> ");
 
         char line[256];
         fgets(line, sizeof(line), stdin);
         line[strcspn(line, "\n")] = 0;
 
-        int count = 0;
-        char *token;
-        char *temp_args[10];
+        if (strncmp(line, "time ", 5) == 0) {
+            args->exec_args = malloc(4 * sizeof(char *));
+            args->exec_args[0] = strdup("sh");
+            args->exec_args[1] = strdup("-c");
+            args->exec_args[2] = strdup(line); // full "time ls"
+            args->exec_args[3] = NULL;
+        } else {
+            int count = 0;
+            char *token;
+            char *temp_args[10];
 
-        token = strtok(line, " ");
-        while (token != NULL && count < 10) {
-            temp_args[count++] = strdup(token);
-            token = strtok(NULL, " ");
+            token = strtok(line, " ");
+            while (token != NULL && count < 10) {
+                temp_args[count++] = strdup(token);
+                token = strtok(NULL, " ");
+            }
+
+            args->exec_args = malloc((count + 1) * sizeof(char *));
+            for (int i = 0; i < count; i++) {
+                args->exec_args[i] = temp_args[i];
+            }
+            args->exec_args[count] = NULL;
         }
-
-        args->exec_args = malloc((count + 1) * sizeof(char *));
-        for (int i = 0; i < count; i++) {
-            args->exec_args[i] = temp_args[i];
-        }
-        args->exec_args[count] = NULL;
-
         return;
     }
 
